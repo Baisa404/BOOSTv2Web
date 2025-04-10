@@ -25,6 +25,7 @@ interface Flashcard {
 
 interface FlashcardContentProps {
   onBack: () => void;
+  onDeleteDeck: (deckId: string) => void; 
   deckId: string;
   topicId: string;
   deckTitle: string;
@@ -33,6 +34,7 @@ interface FlashcardContentProps {
 
 export default function FlashcardContent({
   onBack,
+  onDeleteDeck,
   deckId,
   topicId,
   deckTitle,
@@ -45,8 +47,14 @@ export default function FlashcardContent({
   const [newAnswer, setNewAnswer] = useState("");
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [isStarting, setIsStarting] = useState(false);
+  const [description, setDescription] = useState(deckDescription);
+  const [deckName, setDeckName] = useState(deckTitle);
+  const [showEditDeckModal, setShowEditDeckModal] = useState(false);
 
   const user = auth.currentUser;
+  const deckRef = user
+    ? doc(db, `users/${user.uid}/flashcard/${topicId}/decks`, deckId)
+    : null;
   const cardsCollection = user
     ? collection(db, `users/${user.uid}/flashcard/${topicId}/decks/${deckId}/cards`)
     : null;
@@ -123,6 +131,28 @@ export default function FlashcardContent({
     }
   };
 
+  const updateDeckDetails = async () => {
+    if (!deckRef || deckName.trim() === "" || description.trim() === "") return;
+
+    try {
+      await updateDoc(deckRef, { title: deckName, description });
+      setShowEditDeckModal(false);
+    } catch (error) {
+      console.error("Error updating deck details:", error);
+    }
+  };
+
+  const deleteDeck = async () => {
+    try {
+      const deckRef = doc(db, `users/${auth.currentUser!.uid}/flashcard/${topicId}/decks`, deckId);
+      await deleteDoc(deckRef);
+      onDeleteDeck(deckId); 
+      onBack(); 
+    } catch (error) {
+      console.error("Error deleting deck:", error);
+    }
+  };
+
   if (isStarting) {
     return <StartFlashcards cards={cards} deckTitle={deckTitle} onExit={() => setIsStarting(false)} />;
   }
@@ -140,7 +170,7 @@ export default function FlashcardContent({
           <div className="d-flex align-items-center gap-4 flex-wrap">
             <GoStack size="100" />
             <div>
-              <h3 className="mb-1 text-center text-md-start text-wrap">{deckTitle}</h3>
+              <h3 className="mb-1 text-center text-md-start text-wrap">{deckName}</h3>
               <p className="mb-2 text-muted text-center text-md-start text-wrap">by: @user</p>
               <div className="d-flex align-items-center gap-3 flex-wrap justify-content-center justify-content-md-start">
                 <button
@@ -162,8 +192,22 @@ export default function FlashcardContent({
       </div>
 
       <div className="container mt-5">
+        <button
+          id="edit-btn"
+          className="btn p-2 m-2"
+          onClick={() => setShowEditDeckModal(true)}
+        >
+          Edit
+        </button>
+        <button
+          id="delete-btn"
+          className="btn p-2 m-2"
+          onClick={deleteDeck}
+        >
+          Delete
+        </button>
         <h3>Description:</h3>
-        <span className="ms-5 text-wrap">{deckDescription}</span>
+        <span className="ms-5 text-wrap">{description}</span>
         <hr />
       </div>
 
@@ -273,6 +317,45 @@ export default function FlashcardContent({
             Cancel
           </Button>
           <Button variant="primary" onClick={saveEdit}>
+            Save Changes
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      <Modal
+        show={showEditDeckModal}
+        onHide={() => setShowEditDeckModal(false)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Edit Deck</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form>
+            <Form.Group>
+              <Form.Label>Deck Name</Form.Label>
+              <Form.Control
+                type="text"
+                value={deckName}
+                onChange={(e) => setDeckName(e.target.value)}
+              />
+            </Form.Group>
+            <Form.Group className="mt-3">
+              <Form.Label>Description</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={3}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </Form.Group>
+          </Form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowEditDeckModal(false)}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={updateDeckDetails}>
             Save Changes
           </Button>
         </Modal.Footer>

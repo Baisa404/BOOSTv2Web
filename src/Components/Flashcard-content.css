@@ -1,31 +1,36 @@
 #start-btn {
-    background-color: #FFCE1B;
-    color: white;
-    width: 15rem;
+  background-color: #FFCE1B;
+  color: white;
+  width: 15rem;
 }
-#dlt-btn{
-    background-color: red;
-    color: white;
-    width: 5rem;
+#delete-btn{
+  background-color: red;
+  color: white;
+  width: 5rem;
+}
+#edit-btn{
+  background-color: #FFCE1B;
+  color: white;
+  width: 5rem;
 }
 
 .text-wrap {
-    word-wrap: break-word;
-    word-break: break-word;
-    white-space: normal;
-  }
+  word-wrap: break-word;
+  word-break: break-word;
+  white-space: normal;
+}
 
 @media (max-width: 768px) {
-    .card {
-      flex-direction: column;
-      text-align: center;
-    }
-  
-    .card span {
-      margin-bottom: 10px;
-    }
-  
-    .container h3, .container p {
-      text-align: center;
-    }
+  .card {
+    flex-direction: column;
+    text-align: center;
   }
+
+  .card span {
+    margin-bottom: 10px;
+  }
+
+  .container h3, .container p {
+    text-align: center;
+  }
+}

@@ -317,11 +317,11 @@ export default function Flashcard() {
           deckId={activeComponent.deckId}
           deckTitle={activeComponent.deckTitle}
           deckDescription={activeComponent.deckDescription}
+          topicId={selectedTopicId!}
           onDeleteDeck={(deckId) => handleDeleteDeck(deckId, selectedTopicId!)}
         />
       )}
 
-      {/* Edit Topic Modal */}
       {showEditModal && (
         <div className="modal-bg">
           <div className="modal-content bg-light p-4 rounded-5">

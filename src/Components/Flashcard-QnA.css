@@ -1,58 +1,142 @@
+/* Exit button styling */
 #exit-btn {
-    cursor: pointer;
-  }
-  
-  #bg-1 {
-    font-size: 1rem;
-    flex-wrap: wrap;
-    background-color: #FFCE1B;
-    border-radius: 10px;
-    padding: 0.5rem;
-    justify-content: center;
-  }
-  
-  #question-card {
-    font-size: 1.5rem;
+  cursor: pointer;
+}
+
+/* Background container for deck and score */
+#bg-1 {
+  font-size: 1rem;
+  flex-wrap: wrap;
+  background-color: #FFCE1B;
+  border-radius: 10px;
+  padding: 0.5rem;
+  justify-content: center;
+  display: flex;
+  gap: 1rem;
+}
+
+/* Question card styling */
+#question-card {
+  font-size: 1.5rem;
   font-weight: bold;
   padding: 20px;
+  word-wrap: break-word;
+  border-radius: 10px;
+  background-color: #f8f9fa;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Choice button styling */
+#choice-btn {
+  font-size: 1rem;
+  background-color: #FFCE1B;
+  color: black;
+  padding: 10px;
+  border-radius: 5px;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+#choice-btn:hover {
+  transform: scale(1.05);
+  background-color: #e6b800;
+}
+
+/* Button success and danger states */
+.btn-success {
+  background-color: #28a745 !important;
+  color: white;
+}
+
+.btn-danger {
+  background-color: #dc3545 !important;
+  color: white;
+}
+
+/* Secondary and warning button styles */
+.btn-secondary {
+  background-color: #6c757d !important;
+  color: white;
+}
+
+.btn-warning {
+  background-color: #ffc107 !important;
+  color: white;
+}
+
+/* Progress bar styling */
+progress {
+  width: 100%;
+  height: 20px;
+  appearance: none;
+  -webkit-appearance: none;
+  border: none;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+progress::-webkit-progress-bar {
+  background-color: #f3f3f3;
+}
+
+progress::-webkit-progress-value {
+  background-color: #65713F;
+  transition: width 0.8s ease;
+}
+
+progress::-moz-progress-bar {
+  background-color: #65713F;
+  transition: width 0.8s ease;
+}
+
+/* Quiz completed container styling */
+#quiz-completed-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  text-align: center;
+  background-color: #f8f9fa;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  #bg-1 {
+    font-size: 0.9rem;
+    flex-direction: column;
+    text-align: center;
   }
-  
-  #choice-btn {
-    font-size: 1rem;
-    background-color: #FFCE1B;
-    color: black;
+
+  #question-card {
+    font-size: 1.2rem;
+    padding: 15px;
+  }
+
+  #choices-container button {
+    font-size: 0.9rem;
+    padding: 8px;
+  }
+}
+
+@media (max-width: 576px) {
+  #bg-1 {
+    font-size: 0.8rem;
+  }
+
+  #question-card {
     font-size: 1rem;
     padding: 10px;
   }
 
-  .btn-success {
-    background-color: #28a745 !important;
-    color: white;
+  #choices-container button {
+    font-size: 0.8rem;
+    padding: 6px;
   }
 
-  .btn-danger {
-    background-color: #dc3545 !important;
-    color: white;
+  #quiz-completed-container {
+    padding: 15px;
   }
-  
-  .btn-secondary {
-    background-color: #6c757d !important;
-    color: white;
-  }
-
-
-  
-  @media (max-width: 576px) {
-    #bg-1 {
-      font-size: 0.9rem;
-    }
-  
-    #question-card {
-      font-size: 1rem;
-    }
-  
-    #choices-container button {
-      font-size: 0.9rem;
-      padding: 0.4rem 0.8rem;
-    }
-  }
+}

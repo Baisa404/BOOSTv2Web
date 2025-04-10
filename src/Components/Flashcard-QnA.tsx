@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { RxExit } from "react-icons/rx";
 import "./Flashcard-QnA.css";
+import { getFirestore, doc, updateDoc, getDoc, collection, addDoc } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
+import { format } from "date-fns";
 
 interface FlashcardQnAProps {
   deckTitle: string;
@@ -9,17 +12,17 @@ interface FlashcardQnAProps {
 }
 
 export default function FlashcardQnA({ deckTitle, cards, onExit }: FlashcardQnAProps) {
-  const [remainingQuestions, setRemainingQuestions] = useState(cards); // Track remaining questions
+  const [remainingQuestions, setRemainingQuestions] = useState(cards);
   const [currentQuestion, setCurrentQuestion] = useState<{
     id: string;
     question: string;
     answer: string;
   } | null>(null);
-  const [choices, setChoices] = useState<string[]>([]); // Store choices for the current question
+  const [choices, setChoices] = useState<string[]>([]); 
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   const [score, setScore] = useState(0);
-  const [showNextButton, setShowNextButton] = useState(false);
   const [quizCompleted, setQuizCompleted] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(15);
 
   useEffect(() => {
     if (remainingQuestions.length > 0) {
@@ -27,38 +30,96 @@ export default function FlashcardQnA({ deckTitle, cards, onExit }: FlashcardQnAP
       const question = remainingQuestions[randomIndex];
       setCurrentQuestion(question);
 
-      // Generate choices for the current question
       const incorrectAnswers = [...cards]
-        .filter((card) => card.id !== question.id) // Exclude the current question
-        .sort(() => 0.5 - Math.random()) // Shuffle the remaining cards
-        .slice(0, 3) // Take 3 random incorrect answers
-        .map((card) => card.answer); // Map to answers
-      const allChoices = [...incorrectAnswers, question.answer].sort(() => 0.5 - Math.random()); // Add the correct answer and shuffle
+        .filter((card) => card.id !== question.id)
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 3)
+        .map((card) => card.answer);
+      const allChoices = [...incorrectAnswers, question.answer].sort(() => 0.5 - Math.random());
       setChoices(allChoices);
+
+      setTimeLeft(15);
     } else {
-      setQuizCompleted(true); // Mark the quiz as completed when no questions remain
+      setQuizCompleted(true);
     }
   }, [remainingQuestions]);
 
+  useEffect(() => {
+    if (timeLeft > 0 && !quizCompleted && !selectedChoice) {
+      const timer = setTimeout(() => setTimeLeft((prev) => prev - 1), 1000);
+      return () => clearTimeout(timer);
+    } else if (timeLeft === 0 && !selectedChoice) {
+      handleNextQuestion();
+    }
+  }, [timeLeft, quizCompleted, selectedChoice]);
+
   const handleChoiceSelection = (choice: string) => {
-    if (selectedChoice) return; // Prevent multiple selections
+    if (selectedChoice) return;
 
     setSelectedChoice(choice);
 
     if (choice === currentQuestion!.answer) {
-      setScore((prevScore) => prevScore + 1); // Increment score if the answer is correct
+      setScore((prevScore) => prevScore + 1);
     }
 
-    setShowNextButton(true); // Show the "Next Question" button
+    setTimeout(() => {
+      handleNextQuestion();
+    }, 1000);
   };
 
   const handleNextQuestion = () => {
     setRemainingQuestions((prevQuestions) =>
       prevQuestions.filter((question) => question.id !== currentQuestion!.id)
-    ); // Remove the current question from the remaining questions
-    setSelectedChoice(null); // Reset the selected choice for the next question
-    setShowNextButton(false); // Hide the "Next Question" button
+    );
+    setSelectedChoice(null);
   };
+
+  const calculateAndStoreXP = async () => {
+    const auth = getAuth();
+    const user = auth.currentUser;
+
+    if (!user) {
+      console.error("User not authenticated");
+      return;
+    }
+
+    const db = getFirestore();
+    const userDocRef = doc(db, "users", user.uid);
+
+    try {
+      let xpEarned = 0;
+    if (score === 0) {
+      xpEarned = 0; 
+    } else if (score === cards.length) {
+      xpEarned = 15; 
+    } else if (score / cards.length >= 0.5) {
+      xpEarned = 10; 
+    } else {
+      xpEarned = 5; 
+    }
+
+      const userDocSnapshot = await getDoc(userDocRef);
+      const currentXP = userDocSnapshot.exists() ? userDocSnapshot.data()?.exp || 0 : 0;
+      const updatedXP = currentXP + xpEarned;
+      await updateDoc(userDocRef, { exp: updatedXP });
+      const xpHistoryRef = collection(db, "users", user.uid, "xpHistory");
+      await addDoc(xpHistoryRef, {
+        xpAdded: xpEarned,
+        timestamp: new Date(),
+        formattedDate: format(new Date(), "MMMM d, yyyy"),
+        formattedTime: format(new Date(), "hh:mm a"),
+      });
+      console.log(`XP Earned: ${xpEarned}, Total XP: ${updatedXP}`);
+    } catch (error) {
+      console.error("Error updating XP:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (quizCompleted) {
+      calculateAndStoreXP();
+    }
+  }, [quizCompleted]);
 
   if (cards.length === 0) {
     return (
@@ -69,13 +130,38 @@ export default function FlashcardQnA({ deckTitle, cards, onExit }: FlashcardQnAP
   }
 
   if (quizCompleted) {
-    return (
+    const xpEarned =
+      score === 0
+      ? 0
+      : score === cards.length
+      ? 15
+      : score / cards.length >= 0.5
+      ? 10
+      : 5;
+
+      let message = "";
+      if (score === 0) {
+        message = "Get better next time, but at least you tried!";
+      } else if (score === cards.length) {
+        message = "You got a perfect score! You are amazing!";
+      } else {
+        message = "You did great!";
+      }
+
+      return (
       <div className="container mt-4 text-center">
-        <h3>Quiz Completed!</h3>
-        <p>
-          Your Score: {score}/{cards.length}
-        </p>
-        <button className="btn btn-primary" onClick={onExit}>
+        <div id="bg-1" className="d-flex flex-wrap align-items-center">
+          <span className="ms-4 me-2 text-white">Deck: {deckTitle}</span>
+        </div>
+        <div className="card m-5">
+          <h3>Quiz Completed!</h3>
+          <p>
+            Your Score: {score}/{cards.length}
+          </p>
+          <p>XP Earned: {xpEarned}</p> 
+          <p className="fw-bold">{message}</p>
+        </div>
+        <button className="btn btn-warning text-white" onClick={onExit}>
           Exit Quiz
         </button>
       </div>
@@ -97,12 +183,15 @@ export default function FlashcardQnA({ deckTitle, cards, onExit }: FlashcardQnAP
           <RxExit size="30" className="m-2 me-4" id="exit-btn" onClick={onExit} />
         </div>
         <div id="bg-1" className="d-flex flex-wrap align-items-center">
-          <span className="ms-4 me-2">Deck: {deckTitle}</span>
-          <span className="ms-2">
+          <span className="ms-4 me-2 text-white">Deck: {deckTitle}</span>
+          <span className="ms-2 text-white">
             Score: {score}/{cards.length}
           </span>
         </div>
-
+        <div className="d-flex flex-wrap align-items-center">
+          <progress value={timeLeft} max={15}></progress>
+          <span className="text-center fw-bold">Time Left: {timeLeft}s</span>
+        </div>
         <div className="container">
           <div id="question-card" className="card mt-4 text-center p-3">
             {currentQuestion.question}
@@ -111,30 +200,23 @@ export default function FlashcardQnA({ deckTitle, cards, onExit }: FlashcardQnAP
             {choices.map((choice, index) => (
               <button
                 key={index}
-                className={`btn col-12 col-sm-5 col-md-3 ${
+                className={`btn col-12 col-sm-5 col-md-3 text-white ${
                   selectedChoice
                     ? choice === currentQuestion.answer
-                      ? "btn-success" // Highlight correct answer in green
+                      ? "btn-success"
                       : choice === selectedChoice
-                      ? "btn-danger" // Highlight incorrect answer in red
-                      : "btn-danger" // Disable other choices
+                      ? "btn-danger"
+                      : "btn-danger"
                     : "btn-primary"
                 }`}
                 id="choice-btn"
                 onClick={() => handleChoiceSelection(choice)}
-                disabled={!!selectedChoice} // Disable buttons after a choice is made
+                disabled={!!selectedChoice} 
               >
                 {choice}
               </button>
             ))}
           </div>
-          {showNextButton && (
-            <div className="text-center mt-4">
-              <button className="btn btn-primary" onClick={handleNextQuestion}>
-                Next Question
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </React.Fragment>
